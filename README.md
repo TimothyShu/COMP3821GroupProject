@@ -19,6 +19,43 @@ results/
   figures/         plots
 ```
 
+### Code
+
+- **`src/burning/`** is the main Python package, holding all shared, importable code.
+  - **`algorithms/`** has one file per algorithm (e.g. `three_approx.py`, `max_degree.py`).
+    Each takes a graph and returns a burning sequence.
+  - **`generators/`** has the code that builds the test graphs (paths, grids, spiders,
+    barbells, etc.). Each member adds their assigned generators here.
+  - A shared module that simulates burning and counts rounds will sit next to these two
+    folders, so every algorithm is scored the same way.
+- **`tests/`** has unit tests, e.g. "the path generator returns a connected graph with n
+  vertices" or "this algorithm's sequence burns the whole graph". Run them with `pytest`.
+
+### Running experiments
+
+- **`experiments/`** has the scripts that run the algorithms over many graphs and collect
+  results, and the scripts that turn those results into plots.
+  - **`configs/`** has small files describing *what* to run: which graph families, sizes,
+    random seeds and algorithms. Rerunning a config reproduces an experiment exactly.
+- **`notebooks/`** is for Jupyter notebooks used to explore and try ideas. Anything used in
+  the final results moves into `experiments/` so it can be rerun.
+
+### Data and output
+
+- **`data/snap/`** holds real-world graphs downloaded from the Stanford SNAP collection
+  (extension). It is git-ignored because the files can be large and can be re-downloaded.
+- **`results/raw/`** holds the CSVs produced by experiment runs: one row per algorithm,
+  graph and size, with rounds taken and runtime. It is git-ignored because the CSVs can be
+  regenerated from the configs.
+- **`results/figures/`** holds the plots made from those CSVs, used in the report and poster.
+
+### Pipeline
+
+```
+generators  ->  algorithms  ->  experiments (driven by a config)  ->  results/raw/*.csv  ->  results/figures/
+build graphs    burning seqs    run + time + score                    raw data              plots
+```
+
 ## Algorithms
 
 | Algorithm                         | Owner     |
