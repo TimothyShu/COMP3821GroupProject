@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.DS_Store
+
+# Downloaded datasets and generated results (regenerate with experiments/run.py)
+data/snap/*
+!data/snap/.gitkeep
+results/raw/*
+!results/raw/.gitkeep
+
