@@ -87,8 +87,54 @@ Refer to python library [NetworkX](https://networkx.org/en/) for generating grap
 
 - **Algorithm:** takes a graph and returns a burning sequence (sources in ignition order).
   Rounds are counted by one shared function, not by each algorithm, so results are comparable.
-- **Generator:** takes `n`, a `seed` and family-specific parameters, and returns a connected
-  graph with about n vertices. The same seed must always give the same graph.
+- **Generator:** see below.
+
+## Generator interface
+
+One file per family in `src/burning/generators/` (e.g. `spider.py`), registered with
+`@register`:
+
+```python
+import networkx as nx
+
+from burning.generators.registry import register
+
+
+@register("spider")
+def spider(n: int, *, seed: int | None = None, legs: int = 3) -> nx.Graph:
+    G = ...  # build with NetworkX
+    G = nx.convert_node_labels_to_integers(G)
+    G.graph["family"] = "spider"
+    G.graph["params"] = {"legs": legs}
+    return G
+```
+
+Then add `from burning.generators import spider  # noqa: F401` to
+`src/burning/generators/__init__.py` so it registers itself.
+
+Rules:
+
+1. **`n` is the first positional argument: the target number of vertices.** Return at most
+   `n` vertices, as close to `n` as the family allows (exactly `n` where possible). Code that
+   uses the graph reads the real size from `G.number_of_nodes()`. Raise `ValueError` if `n` is
+   too small for the structure.
+2. **`seed` is always accepted, keyword-only.** Deterministic families ignore it. Random
+   families pass it to NetworkX (`seed=seed`) and never use global `random`/`numpy` state.
+   The same `(n, seed, params)` must give the same graph.
+3. **Shape parameters are keyword-only with sensible defaults**, so `gen(n)` alone works.
+4. **Output:** an undirected simple `nx.Graph` that is connected, with integer node labels
+   `0..N-1` (use `nx.convert_node_labels_to_integers`).
+5. **Metadata:** set `G.graph["family"]` to the registered name and `G.graph["params"]` to the
+   shape parameters used.
+6. **No side effects:** no printing, file I/O or plotting.
+
+**SNAP is the exception:** dataset size is fixed, so it is `load_snap(name: str) -> nx.Graph`,
+not registered. It returns the largest connected component with the same output and metadata
+rules.
+
+`tests/test_generators.py` checks rules 1–5 automatically for every registered generator. Add
+family-specific checks (e.g. a spider has exactly one vertex of degree `legs`) in
+`tests/test_<family>.py`.
 
 ## Workflow
 
