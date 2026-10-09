@@ -135,9 +135,3 @@ rules.
 `tests/test_generators.py` checks rules 1–5 automatically for every registered generator. Add
 family-specific checks (e.g. a spider has exactly one vertex of degree `legs`) in
 `tests/test_<family>.py`.
-
-## Workflow
-
-- Branch per task (e.g. `timothy/three-approx`), never push straight to `main`.
-- Open a PR. Another member reviews and merges it, which doubles as our peer cross-review.
-- Commit configs, not results. Anyone should be able to regenerate a figure from a config.
