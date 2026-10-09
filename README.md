@@ -67,19 +67,21 @@ build graphs    burning seqs    run + time + score                    raw data  
 
 ## Generators
 
+Refer to python library [NetworkX](https://networkx.org/en/) for generating graphs.
+
 | Family                       | Owner |
 | ---------------------------- | ----- |
-| Path                         |       |
-| 2D grid                      |       |
-| d-ary tree                   |       |
-| Barbell                      |       |
-| Spider                       |       |
-| Centipede                    |       |
-| Star                         |       |
-| Cluster                      |       |
-| Scale-free (extension)       |       |
-| Small-world (extension)      |       |
-| SNAP loader (extension)      |       |
+| Path                         |  Adam  |
+| 2D grid                      |  Nathan  |
+| d-ary tree                   |  Tim  |
+| Barbell                      |  Tim  |
+| Spider                       |  Ant |
+| Centipede                    |  Ant |
+| Star                         |  Adam  |
+| Cluster                      |  Nathan  |
+| Scale-free (extension)       |  Nathan  |
+| Small-world (extension)      |  Tim  |
+| SNAP loader (extension)      |  Adam |
 
 ## Interfaces to agree on before coding
 
