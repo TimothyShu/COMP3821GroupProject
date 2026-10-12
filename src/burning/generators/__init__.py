@@ -4,5 +4,6 @@
 """
 
 from burning.generators.registry import GENERATORS, register
+from burning.generators import centipede, spider  # noqa: F401,E402
 
 __all__ = ["GENERATORS", "register"]
