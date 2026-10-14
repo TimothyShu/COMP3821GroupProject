@@ -3,7 +3,13 @@
     from burning.generators import spider  # noqa: F401
 """
 
+from burning.generators import (  # noqa: F401
+    barbell,
+    centipede,
+    dary_tree,
+    small_world,
+    spider,
+)
 from burning.generators.registry import GENERATORS, register
-from burning.generators import centipede, spider  # noqa: F401,E402
 
 __all__ = ["GENERATORS", "register"]
