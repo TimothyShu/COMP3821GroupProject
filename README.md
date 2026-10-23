@@ -26,8 +26,8 @@ results/
     Each takes a graph and returns a burning sequence.
   - **`generators/`** has the code that builds the test graphs (paths, grids, spiders,
     barbells, etc.). Each member adds their assigned generators here.
-  - A shared module that simulates burning and counts rounds will sit next to these two
-    folders, so every algorithm is scored the same way.
+  - **`simulate.py`** simulates burning and counts rounds, so every algorithm is scored the
+    same way. It also has a brute-force exact solver for small graphs (n <= 16) used in tests.
 - **`tests/`** has unit tests, e.g. "the path generator returns a connected graph with n
   vertices" or "this algorithm's sequence burns the whole graph". Run them with `pytest`.
 
@@ -85,9 +85,38 @@ Refer to python library [NetworkX](https://networkx.org/en/) for generating grap
 
 ## Interfaces to agree on before coding
 
-- **Algorithm:** takes a graph and returns a burning sequence (sources in ignition order).
-  Rounds are counted by one shared function, not by each algorithm, so results are comparable.
-- **Generator:** see below.
+- **Algorithm:** see "Algorithm interface" below.
+- **Generator:** see "Generator interface" below.
+
+## Algorithm interface
+
+One file per algorithm in `src/burning/algorithms/`, registered with `@register`, then added
+to the import list in `src/burning/algorithms/__init__.py`:
+
+```python
+import networkx as nx
+
+from burning.algorithms.registry import register
+
+
+@register("max_degree")
+def max_degree(G: nx.Graph) -> list:
+    ...  # return the sources in ignition order
+```
+
+Rules:
+
+1. **Return a burning sequence:** a non-empty list of vertices of `G`, in ignition order.
+2. **Don't count rounds yourself.** Score sequences with `burning.simulate.burning_rounds(G, seq)`
+   so every algorithm is measured identically. `is_burning_sequence` checks the strict
+   definition (each source unburned when chosen, and `G` burned by round `len(seq)`).
+3. **Deterministic:** the same graph gives the same sequence. Break ties by a fixed rule (e.g.
+   smallest label) and document it.
+4. **Don't modify `G`.**
+
+`tests/test_algorithms.py` checks rules 1, 3 and 4 automatically for every registered
+algorithm on every registered graph family. Add algorithm-specific checks in
+`tests/test_<algorithm>.py`.
 
 ## Generator interface
 
