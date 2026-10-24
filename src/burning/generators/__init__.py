@@ -7,8 +7,10 @@ from burning.generators import (  # noqa: F401
     barbell,
     centipede,
     dary_tree,
+    path,
     small_world,
     spider,
+    star,
 )
 from burning.generators.registry import GENERATORS, register
 
