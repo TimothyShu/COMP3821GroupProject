@@ -42,7 +42,7 @@ def max_degree(G: nx.Graph) -> list[Hashable]:
     burned: set[Hashable] = set()
     sequence: list[Hashable] = []
     while len(burned) < G.number_of_nodes():
-        burned.update(G, burned)  # step 1: fire spreads (nothing burns yet in round 1)
+        burned.update(spread(G, burned))  # step 1: fire spreads (nothing burns yet in round 1)
         source = next_source(ranked, burned)  # step 2: light a source if any vertex is left
         if source is not None:
             burned.add(source)
