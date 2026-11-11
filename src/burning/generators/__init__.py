@@ -7,6 +7,7 @@ from burning.generators import (  # noqa: F401
     barbell,
     centipede,
     dary_tree,
+    grid,
     small_world,
     spider,
 )
