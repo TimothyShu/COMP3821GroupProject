@@ -10,8 +10,10 @@ from burning.generators import (  # noqa: F401
     dary_tree,
     grid,
     scale_free,
+    path,
     small_world,
     spider,
+    star,
 )
 from burning.generators.registry import GENERATORS, register
 
