@@ -13,7 +13,6 @@ experiments/
   configs/         experiment configs (graph families, sizes, seeds, algorithms)
 tests/             unit tests for algorithms and generators
 notebooks/         exploration only
-data/snap/         downloaded SNAP datasets (git-ignored)
 results/
   raw/             experiment output CSVs (git-ignored, regenerate from configs)
   figures/         plots
@@ -42,8 +41,6 @@ results/
 
 ### Data and output
 
-- **`data/snap/`** holds real-world graphs downloaded from the Stanford SNAP collection
-  (extension). It is git-ignored because the files can be large and can be re-downloaded.
 - **`results/raw/`** holds the CSVs produced by experiment runs: one row per algorithm,
   graph and size, with rounds taken and runtime. It is git-ignored because the CSVs can be
   regenerated from the configs.
@@ -81,7 +78,6 @@ Refer to python library [NetworkX](https://networkx.org/en/) for generating grap
 | Cluster                      |  Nathan  |
 | Scale-free (extension)       |  Nathan  |
 | Small-world (extension)      |  Tim  |
-| SNAP loader (extension)      |  Adam |
 
 ## Interfaces to agree on before coding
 
@@ -156,10 +152,6 @@ Rules:
 5. **Metadata:** set `G.graph["family"]` to the registered name and `G.graph["params"]` to the
    shape parameters used.
 6. **No side effects:** no printing, file I/O or plotting.
-
-**SNAP is the exception:** dataset size is fixed, so it is `load_snap(name: str) -> nx.Graph`,
-not registered. It returns the largest connected component with the same output and metadata
-rules.
 
 `tests/test_generators.py` checks rules 1–5 automatically for every registered generator. Add
 family-specific checks (e.g. a spider has exactly one vertex of degree `legs`) in
