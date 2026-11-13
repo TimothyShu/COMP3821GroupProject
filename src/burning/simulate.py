@@ -14,6 +14,8 @@ def burn_times(G: nx.Graph, seq: Sequence[Hashable]) -> dict[Hashable, int]:
     """Round in which each vertex burns. Raises ValueError if G never fully burns."""
     if not seq:
         raise ValueError("empty burning sequence")
+    if missing := [x for x in seq if x not in G]:
+        raise ValueError(f"sources not in G: {missing}")
     time: dict[Hashable, int] = {}
     frontier: list[Hashable] = []
     t = 0
@@ -57,6 +59,8 @@ def exact_burning_number(G: nx.Graph, max_n: int = 16) -> int:
     n = G.number_of_nodes()
     if n > max_n:
         raise ValueError(f"exact solver limited to n <= {max_n} (got {n})")
+    if n == 0:
+        return 0  # nothing to burn; the search below starts at k = 1 and would never stop
     nodes = list(G)
     bit = {v: 1 << i for i, v in enumerate(nodes)}
     dist = dict(nx.all_pairs_shortest_path_length(G))

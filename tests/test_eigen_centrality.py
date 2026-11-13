@@ -73,6 +73,26 @@ def test_each_pick_is_most_central_unburned(family, n):
         assert c[x] >= max(c.values()) - 1e-6
 
 
+@pytest.mark.parametrize("family", GENERATORS)
+@pytest.mark.parametrize("n", [10, 100])
+def test_never_lights_a_vertex_with_no_unburned_neighbour(family, n):
+    # Such a vertex catches fire next round anyway, so lighting it wastes the source.
+    # It is fine only when every unburned vertex is alone.
+    G = GENERATORS[family](n, seed=0)
+    seq = mech(G)
+    dist = [nx.single_source_shortest_path_length(G, x) for x in seq]
+    for i, x in enumerate(seq):
+        rest = {v for v in G if not any(dist[j].get(v, math.inf) <= i - j for j in range(i))}
+        if any(u in rest for v in rest for u in G[v]):
+            assert any(u in rest for u in G[x]), f"source {x} in round {i + 1} was isolated"
+
+
+def test_component_with_edges_beats_lone_vertex():
+    # Vertex 0 is alone; 1-2-3 is a path whose centre is 2.
+    G = nx.disjoint_union(nx.empty_graph(1), nx.path_graph(3))
+    assert sorted_vertex_eigenvector(G)[0] == 2
+
+
 @pytest.mark.parametrize("family, n", FAMILY_SIZES)
 def test_deterministic_and_does_not_modify_input(family, n):
     G = GENERATORS[family](n, seed=0)
@@ -114,3 +134,13 @@ def test_edge_cases():
     seq = mech(G)
     assert set(burn_times(G, seq)) == set(G)
     assert exact_burning_number(G) <= burning_rounds(G, seq)
+
+def test_ties_follow_input_node_order():
+    # G.subgraph() iterates in set order once few vertices remain, and there 1 comes
+    # before 10. Hub 0 burns first; its 20 leaves and 11 and 2 burn next. That leaves the
+    # lone vertices 10, 12, 1, 3, all tied, so the pick must be 10, the first one in G.
+    G = nx.Graph()
+    G.add_nodes_from([0, 10, 11, 12, 1, 2, 3])
+    G.add_edges_from([(10, 11), (11, 12), (1, 2), (2, 3), (0, 11), (0, 2)])
+    G.add_edges_from((0, leaf) for leaf in range(100, 120))
+    assert mech(G)[:2] == [0, 10]

@@ -20,31 +20,31 @@ results/
 
 ### Code
 
-- **`src/burning/`** is the main Python package, holding all shared, importable code.
-  - **`algorithms/`** has one file per algorithm (e.g. `three_approx.py`, `max_degree.py`).
-    Each takes a graph and returns a burning sequence.
-  - **`generators/`** has the code that builds the test graphs (paths, grids, spiders,
-    barbells, etc.). Each member adds their assigned generators here.
-  - **`simulate.py`** simulates burning and counts rounds, so every algorithm is scored the
-    same way. It also has a brute-force exact solver for small graphs (n <= 16) used in tests.
-- **`tests/`** has unit tests, e.g. "the path generator returns a connected graph with n
-  vertices" or "this algorithm's sequence burns the whole graph". Run them with `pytest`.
+- `src/burning/` is the main Python package, holding all shared, importable code.
+  - `algorithms/` has one file per algorithm (e.g. `three_approx.py`, `max_degree.py`).
+  Each takes a graph and returns a burning sequence.
+  - `generators/` has the code that builds the test graphs (paths, grids, spiders,
+  barbells, etc.). Each member adds their assigned generators here.
+  - `simulate.py` simulates burning and counts rounds, so every algorithm is scored the
+  same way. It also has a brute-force exact solver for small graphs (n <= 16) used in tests.
+- `tests/` has unit tests, e.g. "the path generator returns a connected graph with n
+vertices" or "this algorithm's sequence burns the whole graph". Run them with `pytest`.
 
 ### Running experiments
 
-- **`experiments/`** has the scripts that run the algorithms over many graphs and collect
-  results, and the scripts that turn those results into plots.
-  - **`configs/`** has small files describing *what* to run: which graph families, sizes,
-    random seeds and algorithms. Rerunning a config reproduces an experiment exactly.
-- **`notebooks/`** is for Jupyter notebooks used to explore and try ideas. Anything used in
-  the final results moves into `experiments/` so it can be rerun.
+- `experiments/` has the scripts that run the algorithms over many graphs and collect
+results, and the scripts that turn those results into plots.
+  - `configs/` has small files describing *what* to run: which graph families, sizes,
+  random seeds and algorithms. Rerunning a config reproduces an experiment exactly.
+- `notebooks/` is for Jupyter notebooks used to explore and try ideas. Anything used in
+the final results moves into `experiments/` so it can be rerun.
 
 ### Data and output
 
-- **`results/raw/`** holds the CSVs produced by experiment runs: one row per algorithm,
-  graph and size, with rounds taken and runtime. It is git-ignored because the CSVs can be
-  regenerated from the configs.
-- **`results/figures/`** holds the plots made from those CSVs, used in the report and poster.
+- `results/raw/` holds the CSVs produced by experiment runs: one row per algorithm,
+graph and size, with rounds taken and runtime. It is git-ignored because the CSVs can be
+regenerated from the configs.
+- `results/figures/` holds the plots made from those CSVs, used in the report and poster.
 
 ### Pipeline
 
@@ -70,11 +70,11 @@ uv sync
 
 A config is a YAML file in `experiments/configs/` with these keys:
 
-| Key          | Required | Meaning                                                                      |
-| ------------ | -------- | ---------------------------------------------------------------------------- |
-| `seeds`      | yes      | List of seeds. The runner builds each graph once per seed.                   |
-| `families`   | yes      | Map from a family name to a list of target sizes `n`.                        |
-| `algorithms` | no       | List of algorithm names. Leave it out to run every registered algorithm.     |
+| Key          | Required | Meaning                                                                  |
+| ------------ | -------- | ------------------------------------------------------------------------ |
+| `seeds`      | yes      | List of seeds. The runner builds each graph once per seed.               |
+| `families`   | yes      | Map from a family name to a list of target sizes `n`.                    |
+| `algorithms` | noclea   | List of algorithm names. Leave it out to run every registered algorithm. |
 
 ```yaml
 seeds: [0, 1, 2]
@@ -194,11 +194,13 @@ Rules:
 
 1. **Return a burning sequence:** a non-empty list of vertices of `G`, in ignition order.
 2. **Don't count rounds yourself.** Score sequences with `burning.simulate.burning_rounds(G, seq)`
+
    so every algorithm is measured identically. `is_burning_sequence` checks the strict
-   definition (each source unburned when chosen, and `G` burned by round `len(seq)`).
+    definition (each source unburned when chosen, and `G` burned by round `len(seq)`).
 3. **Deterministic:** the same graph gives the same sequence. Break ties by a fixed rule (e.g.
+
    smallest label) and document it.
-4. **Don't modify `G`.**
+4. **Don't modify** `G`**.**
 
 `tests/test_algorithms.py` checks rules 1, 3 and 4 automatically for every registered
 algorithm on every registered graph family. Add algorithm-specific checks in
@@ -229,17 +231,21 @@ Then add `from burning.generators import spider  # noqa: F401` to
 
 Rules:
 
-1. **`n` is the first positional argument: the target number of vertices.** Return at most
+1. `n` **is the first positional argument: the target number of vertices.** Return at most
+
    `n` vertices, as close to `n` as the family allows (exactly `n` where possible). Code that
-   uses the graph reads the real size from `G.number_of_nodes()`. Raise `ValueError` if `n` is
-   too small for the structure.
-2. **`seed` is always accepted, keyword-only.** Deterministic families ignore it. Random
+    uses the graph reads the real size from `G.number_of_nodes()`. Raise `ValueError` if `n` is
+    too small for the structure.
+2. `seed` **is always accepted, keyword-only.** Deterministic families ignore it. Random
+
    families pass it to NetworkX (`seed=seed`) and never use global `random`/`numpy` state.
-   The same `(n, seed, params)` must give the same graph.
+    The same `(n, seed, params)` must give the same graph.
 3. **Shape parameters are keyword-only with sensible defaults**, so `gen(n)` alone works.
 4. **Output:** an undirected simple `nx.Graph` that is connected, with integer node labels
+
    `0..N-1` (use `nx.convert_node_labels_to_integers`).
 5. **Metadata:** set `G.graph["family"]` to the registered name and `G.graph["params"]` to the
+
    shape parameters used.
 6. **No side effects:** no printing, file I/O or plotting.
 
