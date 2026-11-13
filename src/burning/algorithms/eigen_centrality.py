@@ -7,8 +7,11 @@ then burn the vertex with the next highest score in the subgraph of unburned ver
 from collections.abc import Hashable
 
 import networkx as nx
+import numpy as np
+import scipy.linalg
 
 from burning.algorithms.registry import register
+
 
 def spread(G: nx.Graph, burned: set[Hashable]) -> set[Hashable]:
     """Burns neighbours and updates the graph."""
@@ -17,11 +20,24 @@ def spread(G: nx.Graph, burned: set[Hashable]) -> set[Hashable]:
         spreaded.update(G.neighbors(burnt_node))
     return spreaded - burned
 
+def _perron_vector(G: nx.Graph) -> dict[Hashable, float]:
+    """Eigenvector centrality of a connected graph, unit norm.
+
+    nx.eigenvector_centrality_numpy runs ARPACK from a random start vector, so tied
+    vertices can swap order between runs. A dense
+    symmetric solve has no random start: the same graph always gives the same vector.
+    """
+    
+    A = nx.to_numpy_array(G)
+    _, vec = scipy.linalg.eigh(A, subset_by_index=[len(A) - 1, len(A) - 1])
+    v = np.abs(vec[:, 0])  # the top eigenvector of a connected graph has one sign
+    return dict(zip(G, v / np.linalg.norm(v)))
+
+
 def sorted_vertex_eigenvector(G: nx.Graph) -> list[Hashable]:
     """Sort by component-wise eigenvector centrality, preserving node order on ties.
 
-    A power iteration can converge very slowly on long paths and barbell graphs.
-    Solve each connected component directly instead; this also makes the ranking
+    Each connected component is solved on its own, which keeps the ranking
     well-defined for disconnected residual graphs.
     """
     if G.number_of_edges() == 0:
@@ -35,13 +51,7 @@ def sorted_vertex_eigenvector(G: nx.Graph) -> list[Hashable]:
         elif len(nodes) == 2:
             centrality.update({node: 1 / 2**0.5 for node in nodes})
         else:
-            centrality.update(
-                nx.eigenvector_centrality_numpy(
-                    component,
-                    max_iter=max(1_000, 100 * len(nodes)),
-                    tol=1e-10,
-                )
-            )
+            centrality.update(_perron_vector(component))
 
     node_order = {node: i for i, node in enumerate(G)}
     # Ignore tiny solver noise so mathematically tied vertices use node order.

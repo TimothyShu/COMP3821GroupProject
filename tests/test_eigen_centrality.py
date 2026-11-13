@@ -1,6 +1,7 @@
 import math
 
 import networkx as nx
+import numpy as np
 import pytest
 
 from burning.algorithms.eigen_centrality import mech, sorted_vertex_eigenvector
@@ -62,7 +63,13 @@ def test_each_pick_is_most_central_unburned(family, n):
         assert x in rest
         if rest.number_of_edges() == 0 or not nx.is_connected(rest):
             continue  # ties between components make the reference ranking ambiguous
-        c = nx.eigenvector_centrality_numpy(rest)
+        # Dense reference: ARPACK (nx.eigenvector_centrality_numpy) fails on 2-vertex
+        # graphs and does not converge on long paths.
+        vals, vecs = np.linalg.eigh(nx.to_numpy_array(rest))
+        if vals[-1] - vals[-2] < 1e-9:
+            continue  # near-equal top eigenvalues (barbell): centrality is not numerically defined
+        top = np.abs(vecs[:, -1])
+        c = dict(zip(rest, top / np.linalg.norm(top)))
         assert c[x] >= max(c.values()) - 1e-6
 
 
@@ -87,7 +94,7 @@ def test_star_is_burned_optimally(n):
     # The centre is the unique top-ranked vertex, so MECH lights it first: b(star) = 2.
     G = nx.star_graph(n)
     assert mech(G)[0] == 0
-    assert burning_rounds(G, mech(G)) == exact_burning_number(G) == 2
+    assert burning_rounds(G, mech(G)) == 2  # b(star) = 2; exact solver caps at 16 vertices
 
 
 def test_ranking_and_tie_breaking():
