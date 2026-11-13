@@ -41,3 +41,12 @@ def test_exact_path_is_ceil_sqrt_n(n):
 @pytest.mark.parametrize("n", range(3, 15))
 def test_exact_star_is_two(n):
     assert exact_burning_number(nx.star_graph(n - 1)) == 2
+
+
+def test_source_not_in_graph_raises():
+    with pytest.raises(ValueError):
+        burning_rounds(nx.path_graph(3), [0, "z"])
+
+
+def test_exact_empty_graph_is_zero():
+    assert exact_burning_number(nx.empty_graph(0)) == 0

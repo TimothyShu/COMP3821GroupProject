@@ -1,6 +1,7 @@
 import math
 
 import networkx as nx
+import numpy as np
 import pytest
 
 from burning.algorithms.eigen_centrality import mech, sorted_vertex_eigenvector
@@ -62,8 +63,34 @@ def test_each_pick_is_most_central_unburned(family, n):
         assert x in rest
         if rest.number_of_edges() == 0 or not nx.is_connected(rest):
             continue  # ties between components make the reference ranking ambiguous
-        c = nx.eigenvector_centrality_numpy(rest)
+        # Dense reference: ARPACK (nx.eigenvector_centrality_numpy) fails on 2-vertex
+        # graphs and does not converge on long paths.
+        vals, vecs = np.linalg.eigh(nx.to_numpy_array(rest))
+        if vals[-1] - vals[-2] < 1e-9:
+            continue  # near-equal top eigenvalues (barbell): centrality is not numerically defined
+        top = np.abs(vecs[:, -1])
+        c = dict(zip(rest, top / np.linalg.norm(top)))
         assert c[x] >= max(c.values()) - 1e-6
+
+
+@pytest.mark.parametrize("family", GENERATORS)
+@pytest.mark.parametrize("n", [10, 100])
+def test_never_lights_a_vertex_with_no_unburned_neighbour(family, n):
+    # Such a vertex catches fire next round anyway, so lighting it wastes the source.
+    # It is fine only when every unburned vertex is alone.
+    G = GENERATORS[family](n, seed=0)
+    seq = mech(G)
+    dist = [nx.single_source_shortest_path_length(G, x) for x in seq]
+    for i, x in enumerate(seq):
+        rest = {v for v in G if not any(dist[j].get(v, math.inf) <= i - j for j in range(i))}
+        if any(u in rest for v in rest for u in G[v]):
+            assert any(u in rest for u in G[x]), f"source {x} in round {i + 1} was isolated"
+
+
+def test_component_with_edges_beats_lone_vertex():
+    # Vertex 0 is alone; 1-2-3 is a path whose centre is 2.
+    G = nx.disjoint_union(nx.empty_graph(1), nx.path_graph(3))
+    assert sorted_vertex_eigenvector(G)[0] == 2
 
 
 @pytest.mark.parametrize("family, n", FAMILY_SIZES)
@@ -87,7 +114,7 @@ def test_star_is_burned_optimally(n):
     # The centre is the unique top-ranked vertex, so MECH lights it first: b(star) = 2.
     G = nx.star_graph(n)
     assert mech(G)[0] == 0
-    assert burning_rounds(G, mech(G)) == exact_burning_number(G) == 2
+    assert burning_rounds(G, mech(G)) == 2  # b(star) = 2; exact solver caps at 16 vertices
 
 
 def test_ranking_and_tie_breaking():
@@ -107,3 +134,13 @@ def test_edge_cases():
     seq = mech(G)
     assert set(burn_times(G, seq)) == set(G)
     assert exact_burning_number(G) <= burning_rounds(G, seq)
+
+def test_ties_follow_input_node_order():
+    # G.subgraph() iterates in set order once few vertices remain, and there 1 comes
+    # before 10. Hub 0 burns first; its 20 leaves and 11 and 2 burn next. That leaves the
+    # lone vertices 10, 12, 1, 3, all tied, so the pick must be 10, the first one in G.
+    G = nx.Graph()
+    G.add_nodes_from([0, 10, 11, 12, 1, 2, 3])
+    G.add_edges_from([(10, 11), (11, 12), (1, 2), (2, 3), (0, 11), (0, 2)])
+    G.add_edges_from((0, leaf) for leaf in range(100, 120))
+    assert mech(G)[:2] == [0, 10]

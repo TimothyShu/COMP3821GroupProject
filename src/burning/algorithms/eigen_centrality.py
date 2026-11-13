@@ -7,45 +7,58 @@ then burn the vertex with the next highest score in the subgraph of unburned ver
 from collections.abc import Hashable
 
 import networkx as nx
+import numpy as np
+import scipy.linalg
 
 from burning.algorithms.registry import register
 
+
 def spread(G: nx.Graph, burned: set[Hashable]) -> set[Hashable]:
-    """Burns neighbours and updates the graph."""
+    """Unburned neighbours of the burned set, the vertices that catch fire next round."""
     spreaded: set[Hashable] = set()
     for burnt_node in burned:
         spreaded.update(G.neighbors(burnt_node))
     return spreaded - burned
 
-def sorted_vertex_eigenvector(G: nx.Graph) -> list[Hashable]:
-    """Sort by component-wise eigenvector centrality, preserving node order on ties.
+def _perron_vector(G: nx.Graph, nodes: list[Hashable]) -> tuple[float, dict[Hashable, float]]:
+    """Top eigenvalue and unit-norm eigenvector centrality of the connected subgraph on nodes.
 
-    A power iteration can converge very slowly on long paths and barbell graphs.
-    Solve each connected component directly instead; this also makes the ranking
-    well-defined for disconnected residual graphs.
+    nx.eigenvector_centrality_numpy runs ARPACK from a random start vector, so tied
+    vertices can swap order between runs. A dense symmetric solve has no random start:
+    the same graph always gives the same vector.
     """
-    if G.number_of_edges() == 0:
-        return list(G.nodes())
+    # ponytail: dense O(n^3) solve, fine for n <= ~2000; use eigsh with v0=ones beyond that.
+    A = nx.to_numpy_array(G, nodelist=nodes)
+    val, vec = scipy.linalg.eigh(A, subset_by_index=[len(A) - 1, len(A) - 1])
+    v = np.abs(vec[:, 0])  # the top eigenvector of a connected graph has one sign
+    return float(val[0]), dict(zip(nodes, v / np.linalg.norm(v)))
 
-    centrality: dict[Hashable, float] = {}
-    for nodes in nx.connected_components(G):
-        component = G.subgraph(nodes)
-        if len(nodes) == 1:
-            centrality[next(iter(nodes))] = 1.0
-        elif len(nodes) == 2:
-            centrality.update({node: 1 / 2**0.5 for node in nodes})
-        else:
-            centrality.update(
-                nx.eigenvector_centrality_numpy(
-                    component,
-                    max_iter=max(1_000, 100 * len(nodes)),
-                    tol=1e-10,
-                )
-            )
 
+def sorted_vertex_eigenvector(G: nx.Graph) -> list[Hashable]:
+    """Rank vertices by eigenvector centrality, preserving node order on ties.
+
+    On a disconnected graph the top eigenvector lives on the component with the largest
+    top eigenvalue, so components are ranked by that eigenvalue first, then vertices by
+    their score inside the component. A lone vertex (eigenvalue 0) therefore never beats
+    a vertex with an unburned neighbour.
+    """
     node_order = {node: i for i, node in enumerate(G)}
+    rank: dict[Hashable, tuple[float, float]] = {}
+    for nodes in nx.connected_components(G):
+        if len(nodes) == 1:
+            rank[next(iter(nodes))] = (0.0, 1.0)
+        elif len(nodes) == 2:
+            rank.update({node: (1.0, 1 / 2**0.5) for node in nodes})
+        else:
+            # Rows in G's order: set order would change the float noise between runs.
+            val, vec = _perron_vector(G, sorted(nodes, key=node_order.__getitem__))
+            rank.update({node: (val, score) for node, score in vec.items()})
+
     # Ignore tiny solver noise so mathematically tied vertices use node order.
-    return sorted(G, key=lambda v: (-round(centrality[v], 10), node_order[v]))
+    return sorted(
+        G, key=lambda v: (-round(rank[v][0], 10), -round(rank[v][1], 10), node_order[v])
+    )
+
 
 def mech(G: nx.Graph) -> list[Hashable]:
     """Burning sequence for G, sources in ignition order. Does not modify G."""
@@ -53,9 +66,11 @@ def mech(G: nx.Graph) -> list[Hashable]:
     sequence: list[Hashable] = []
     while len(burned) < G.number_of_nodes():
         burned.update(spread(G, burned))  # step 1: fire spreads
-        remaining = [v for v in G.nodes() if v not in burned]
-        if remaining:  # step 2: light the most central unburned vertex
-            source = sorted_vertex_eigenvector(G.subgraph(remaining))[0]
+        if len(burned) < G.number_of_nodes():  # step 2: light the most central unburned vertex
+            # Not G.subgraph(): it iterates in set order, which breaks the node-order tie-break.
+            rest = G.copy()
+            rest.remove_nodes_from(burned)
+            source = sorted_vertex_eigenvector(rest)[0]
             burned.add(source)
             sequence.append(source)
     return sequence
