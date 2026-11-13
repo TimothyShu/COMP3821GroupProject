@@ -53,6 +53,96 @@ generators  ->  algorithms  ->  experiments (driven by a config)  ->  results/ra
 build graphs    burning seqs    run + time + score                    raw data              plots
 ```
 
+## Run an experiment
+
+### Set up
+
+Install [uv](https://docs.astral.sh/uv/), then install the dependencies from the project root:
+
+```bash
+uv sync
+```
+
+`uv run` runs a command inside the project's virtual environment, so you don't need to set
+`PYTHONPATH`.
+
+### Write a config
+
+A config is a YAML file in `experiments/configs/` with these keys:
+
+| Key          | Required | Meaning                                                                      |
+| ------------ | -------- | ---------------------------------------------------------------------------- |
+| `seeds`      | yes      | List of seeds. The runner builds each graph once per seed.                   |
+| `families`   | yes      | Map from a family name to a list of target sizes `n`.                        |
+| `algorithms` | no       | List of algorithm names. Leave it out to run every registered algorithm.     |
+
+```yaml
+seeds: [0, 1, 2]
+algorithms: [max_degree, three_approx]
+families:
+  path: [10, 100]
+  spider: [100]
+```
+
+Names are the ones passed to `@register`. To list them:
+
+```bash
+uv run python -c "from burning.algorithms import ALGORITHMS; from burning.generators import GENERATORS; print(sorted(ALGORITHMS)); print(sorted(GENERATORS))"
+```
+
+Every family runs with its default shape parameters, for example `legs=3` for `spider`. A
+config can't change them. Deterministic families such as `path` give the same graph for every
+seed, so extra seeds only repeat the timing.
+
+`experiments/configs/default.yaml` runs all ten families at sizes 10, 100 and 1000, with seeds
+0, 1 and 2 and every algorithm.
+
+### Run it
+
+```bash
+uv run python experiments/run.py experiments/configs/default.yaml
+```
+
+The default config takes about 30 seconds. The runner builds each graph, times each algorithm
+on it, and scores the sequence with `burning_rounds`. It writes `results/raw/<config name>.csv`,
+named after the config file, and overwrites any earlier file with that name. It then prints the
+mean rounds for each family and size, one column per algorithm:
+
+```
+algorithm  max_degree  three_approx
+family n
+path   10         5.0           6.0
+       50        25.0          10.0
+star   10         2.0           2.0
+```
+
+### Read the CSV
+
+The CSV has one row per family, size, seed and algorithm:
+
+| Column      | Meaning                                                                       |
+| ----------- | ----------------------------------------------------------------------------- |
+| `family`    | Family name.                                                                  |
+| `n`         | Target size from the config.                                                  |
+| `seed`      | Seed passed to the generator.                                                 |
+| `algorithm` | Algorithm name.                                                               |
+| `vertices`  | Number of vertices in the graph built. It can be less than `n`.               |
+| `edges`     | Number of edges in the graph built.                                           |
+| `rounds`    | Rounds the algorithm's sequence takes to burn the graph.                      |
+| `seconds`   | Wall-clock time of the algorithm call alone, not graph building or scoring.   |
+
+The first call to an algorithm can include one-off library start-up time. Compare `seconds`
+across seeds, not from a single row.
+
+To load it for plotting:
+
+```python
+import pandas as pd
+
+df = pd.read_csv("results/raw/default.csv")
+df.groupby(["family", "n", "algorithm"])["rounds"].mean()
+```
+
 ## Algorithms
 
 | Algorithm                         | Owner     |

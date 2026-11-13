@@ -1,5 +1,3 @@
-
-
 import networkx as nx
 
 from burning.generators.registry import register
