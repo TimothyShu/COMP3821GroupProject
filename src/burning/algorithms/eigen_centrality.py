@@ -1,10 +1,11 @@
-"""Maximum eigenvector centrality heuristic for eigengraph centrality algorithm for graph burning (owner: Antyabha).
+"""Maximum eigenvector centrality heuristic for eigengraph centrality algorithm for graph burning (owner: Adam).
 
 Rank every vertex by its eigenvector centrality score. Burn the vertex with the highest score and 
 then burn the vertex with the next highest score in the subgraph of unburned vertices. Repeat until all vertices are burned.
 """
 
 from collections.abc import Hashable
+from scipy.sparse.linalg import eigsh
 
 import networkx as nx
 import numpy as np
@@ -27,12 +28,14 @@ def _perron_vector(G: nx.Graph, nodes: list[Hashable]) -> tuple[float, dict[Hash
     vertices can swap order between runs. A dense symmetric solve has no random start:
     the same graph always gives the same vector.
     """
-    # ponytail: dense O(n^3) solve, fine for n <= ~2000; use eigsh with v0=ones beyond that.
-    A = nx.to_numpy_array(G, nodelist=nodes)
-    val, vec = scipy.linalg.eigh(A, subset_by_index=[len(A) - 1, len(A) - 1])
-    v = np.abs(vec[:, 0])  # the top eigenvector of a connected graph has one sign
+    n = len(nodes)
+    A = nx.to_scipy_sparse_array(G, nodelist=nodes, dtype=float)
+    if n <= 200:  # tiny: dense is faster than ARPACK setup
+        val, vec = scipy.linalg.eigh(A.toarray(), subset_by_index=[n - 1, n - 1])
+    else:  # fixed start vector (not random), so the same graph gives the same result
+        val, vec = eigsh(A, k=1, which="LA", v0=np.ones(n), tol=1e-12)
+    v = np.abs(vec[:, 0])
     return float(val[0]), dict(zip(nodes, v / np.linalg.norm(v)))
-
 
 def sorted_vertex_eigenvector(G: nx.Graph) -> list[Hashable]:
     """Rank vertices by eigenvector centrality, preserving node order on ties.
@@ -60,21 +63,30 @@ def sorted_vertex_eigenvector(G: nx.Graph) -> list[Hashable]:
     )
 
 
-def mech(G: nx.Graph) -> list[Hashable]:
-    """Burning sequence for G, sources in ignition order. Does not modify G."""
+def mech(G: nx.Graph, bg: int) -> list[Hashable] | None:
+    """Burning sequence of length bg, or None (FAILED TO BURN)."""
+    X: list[Hashable] = []
     burned: set[Hashable] = set()
-    sequence: list[Hashable] = []
-    while len(burned) < G.number_of_nodes():
-        burned.update(spread(G, burned))  # step 1: fire spreads
-        if len(burned) < G.number_of_nodes():  # step 2: light the most central unburned vertex
-            # Not G.subgraph(): it iterates in set order, which breaks the node-order tie-break.
-            rest = G.copy()
-            rest.remove_nodes_from(burned)
-            source = sorted_vertex_eigenvector(rest)[0]
-            burned.add(source)
-            sequence.append(source)
-    return sequence
+    TG = G.copy()
+    for i in range(1, bg + 1):
+        comp = max(nx.connected_components(TG), key=lambda c: nx.diameter(TG.subgraph(c)))
+        ecc = nx.eccentricity(TG.subgraph(comp))
+        free = [v for v in ecc if v not in X]
+        if i >= min(ecc.values()) and free:  # lines 4-5: most central vertex of that component
+            x = min(free, key=ecc.get)
+        else:  # line 6: highest eigenvector centrality in TG
+            x = next(v for v in sorted_vertex_eigenvector(TG) if v not in X)
+        X.append(x)
+        burned |= set(nx.single_source_shortest_path_length(G, x, cutoff=bg - i))  # ego(G, bg - i, x)
+        TG = G.copy()
+        TG.remove_edges_from(list(G.subgraph(burned).edges()))
+    return X if len(burned) == len(G) else None
 
 @register("eigen_centrality")
 def eigen_centrality(G: nx.Graph) -> list[Hashable]:
-    return mech(G)
+    """Smallest guess bg for which mech succeeds (bg = n always does)."""
+    for bg in range(1, len(G) + 1):
+        X = mech(G, bg)
+        if X:
+            return X
+    return []
