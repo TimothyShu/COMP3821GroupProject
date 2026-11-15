@@ -1,0 +1,18 @@
+# Every registered family at three sizes, three seeds, every registered algorithm.
+# Run: PYTHONPATH=src .venv/bin/python experiments/run.py experiments/configs/default.yaml
+# Writes results/raw/default.csv.
+
+seeds: [0]
+algorithms: [eigen_centrality]   # omit to run every registered algorithm
+
+families:
+  path: [10, 100, 200, 300, 500]
+  star: [10, 100, 200, 300, 500]
+  grid: [10, 100, 200, 300, 500]
+  spider: [10, 100, 200, 300, 500]
+  centipede: [10, 100, 200, 300, 500]
+  barbell: [10, 100, 200, 300, 500]
+  cluster: [10, 100, 200, 300, 500]
+  scale_free: [10, 100, 200, 300, 500]
+  small_world: [10, 100, 200, 300, 500]
+  dary_tree: [10, 100, 200, 300, 500]

@@ -80,8 +80,8 @@ def test_ranking_and_tie_breaking():
 def test_edge_cases():
     assert eigen_centrality(nx.empty_graph(0)) == []
     assert eigen_centrality(nx.empty_graph(1)) == [0]
-    assert eigen_centrality(nx.empty_graph(3)) == [0, 1, 2]  # edgeless: every vertex must be lit, in node order
-    # Disconnected input: the unburned subgraph is disconnected from round 1.
+    assert eigen_centrality(nx.empty_graph(3)) == [0, 1, 2]  # Every vertex must be lit, in node order
+    # The unburned subgraph is disconnected from round 1.
     G = nx.disjoint_union(nx.path_graph(4), nx.star_graph(3))
     seq = eigen_centrality(G)
     assert set(burn_times(G, seq)) == set(G)
