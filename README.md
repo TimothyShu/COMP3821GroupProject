@@ -151,6 +151,13 @@ df.groupby(["family", "n", "algorithm"])["rounds"].mean()
 | Eigenvector centrality            | Adam      |
 | Farthest-first                    | Nathaniel |
 | Maximum degree                    | Antyabha  |
+| 3-approximation, heuristic scan orders (extension) | Timothy |
+
+The extension variants (`three_approx_degree`, `three_approx_eigen`, `three_approx_farthest` in
+`hybrid_approx.py`) run Burn-Guess in degree, eigenvector-centrality or farthest-first order.
+The 3-approximation proof never depends on the scan order, so each keeps the 3 b(G) guarantee.
+`experiments/benchmark_ratios.py` compares every algorithm's ratio against exact or
+lower-bound values of b(G).
 
 ## Generators
 
