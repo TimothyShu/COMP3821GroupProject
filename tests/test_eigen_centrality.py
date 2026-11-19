@@ -1,7 +1,6 @@
 import math
 
 import networkx as nx
-import numpy as np
 import pytest
 
 from burning.algorithms.eigen_centrality import eigen_centrality, sorted_vertex_eigenvector
@@ -87,3 +86,13 @@ def test_edge_cases():
     assert set(burn_times(G, seq)) == set(G)
     assert exact_burning_number(G) <= burning_rounds(G, seq)
 
+
+
+@pytest.mark.parametrize("family, n", FAMILY_SIZES)
+def test_sources_are_unburned_when_lit(family, n):
+    # Strict definition: x_i is not on fire at round i (no neighbour burned before round i).
+    G = GENERATORS[family](n, seed=0)
+    seq = eigen_centrality(G)
+    time = burn_times(G, seq)
+    for i, x in enumerate(seq, start=1):
+        assert time[x] == i and all(time[u] >= i for u in G[x])
