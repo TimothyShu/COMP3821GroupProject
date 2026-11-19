@@ -29,12 +29,7 @@ from burning.simulate import burn_times
 OUT = Path(__file__).resolve().parents[1] / "results" / "raw" / "benchmark_ratios.csv"
 RANDOM = {"spider", "small_world", "scale_free"}  # families whose graph depends on the seed
 SMALL_SIZES = [10, 15, 20, 25, 30]
-SIZES = [50, 100, 200, 500, 1000, 2000, 5000, 10000]
-MAX_N = {  # largest n each algorithm is run on
-    "three_approx": 10000, "three_approx_degree": 10000, "three_approx_eigen": 10000,
-    "three_approx_farthest": 10000, "max_degree": 1000, "farthest_first": 1000,
-    "eigen_centrality": 1000,  # ~11 s on P_1000
-}
+SIZES = [50, 100, 200, 500, 1000]  # every algorithm runs on every size
 SEEDS = range(10)
 REPEATS = 3
 BOUNDS = (three_approx_with_bound, degree_with_bound, eigen_with_bound, farthest_with_bound)
@@ -122,10 +117,9 @@ def main(out: Path) -> None:
         for family in GENERATORS:
             for n in sizes:
                 for seed in SEEDS if family in RANDOM else [0]:
-                    algs = [a for a in ALGORITHMS if n <= MAX_N.get(a, 1000)]
                     G = GENERATORS[family](n, seed=seed)
                     ref = reference(family, G, exact)
-                    rows += [score(a, family, n, G, seed, *ref) for a in algs]
+                    rows += [score(a, family, n, G, seed, *ref) for a in ALGORITHMS]
                 print(f"{family:12} n={n}", file=sys.stderr, flush=True)
     out.parent.mkdir(parents=True, exist_ok=True)
     with out.open("w", newline="") as f:
