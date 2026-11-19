@@ -33,7 +33,7 @@ SIZES = [50, 100, 200, 500, 1000, 2000, 5000, 10000]
 MAX_N = {  # largest n each algorithm is run on
     "three_approx": 10000, "three_approx_degree": 10000, "three_approx_eigen": 10000,
     "three_approx_farthest": 10000, "max_degree": 1000, "farthest_first": 1000,
-    "eigen_centrality": 200,  # ~130 s on P_1000
+    "eigen_centrality": 1000,  # ~11 s on P_1000
 }
 SEEDS = range(10)
 REPEATS = 3
