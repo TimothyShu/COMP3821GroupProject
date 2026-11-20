@@ -8,10 +8,15 @@ Each graph's reference value does not depend on the algorithm being scored:
   lb_best  otherwise max(lb_diam, lb_3approx), so `ratio` is an upper bound on the true ratio.
 lb_diam = ceil(sqrt(diam + 1)): k rounds cover at most 1 + 3 + ... + (2k - 1) = k^2 vertices of a
 shortest path. lb_3approx is the best bound certified by any of the four 3-approx scan orders.
+
+Every graph is relabelled by a random permutation per seed (vertex labels, node order and
+adjacency order all change), so tie-breaking varies even for deterministic families. Random
+families also draw a new graph per seed.
 """
 
 import csv
 import math
+import random
 import statistics
 import sys
 import time
@@ -27,12 +32,21 @@ from burning.generators import GENERATORS
 from burning.simulate import burn_times
 
 OUT = Path(__file__).resolve().parents[1] / "results" / "raw" / "benchmark_ratios.csv"
-RANDOM = {"spider", "small_world", "scale_free"}  # families whose graph depends on the seed
 SMALL_SIZES = [10, 15, 20, 25, 30]
 SIZES = [50, 100, 200, 500, 1000]  # every algorithm runs on every size
 SEEDS = range(10)
-REPEATS = 3
+REPEATS = 1  # the 10 relabelled seeds already give 10 timing samples
 BOUNDS = (three_approx_with_bound, degree_with_bound, eigen_with_bound, farthest_with_bound)
+
+
+def relabel(G: nx.Graph, seed: int) -> nx.Graph:
+    """Isomorphic copy with labels 0..N-1 shuffled; nodes and edges are added in label order."""
+    perm = list(range(G.number_of_nodes()))
+    random.Random(seed).shuffle(perm)
+    H = nx.Graph(**G.graph)
+    H.add_nodes_from(range(len(perm)))
+    H.add_edges_from(sorted(tuple(sorted((perm[u], perm[v]))) for u, v in G.edges()))
+    return H
 
 
 def ceil_sqrt(x: int) -> int:
@@ -103,7 +117,7 @@ def score(alg: str, family: str, n: int, G: nx.Graph, seed: int, b, lbd: int, lb
         assert rounds <= 3 * (b or lb), (alg, family, n, seed)
     return {
         "alg": alg, "family": family, "n_target": n, "n": G.number_of_nodes(),
-        "m": G.number_of_edges(), "seed": seed if family in RANDOM else "",
+        "m": G.number_of_edges(), "seed": seed,
         "seq_len": len(seq), "rounds": rounds, "b_exact": "" if b is None else b,
         "lb_diam": lbd, "lb_3approx": lb3, "lb_best": lb,
         "ratio": round(rounds / (b or lb), 4), "ratio_is_exact": b is not None,
@@ -116,8 +130,8 @@ def main(out: Path) -> None:
     for exact, sizes in ((True, SMALL_SIZES), (False, SIZES)):
         for family in GENERATORS:
             for n in sizes:
-                for seed in SEEDS if family in RANDOM else [0]:
-                    G = GENERATORS[family](n, seed=seed)
+                for seed in SEEDS:
+                    G = relabel(GENERATORS[family](n, seed=seed), seed)
                     ref = reference(family, G, exact)
                     rows += [score(a, family, n, G, seed, *ref) for a in ALGORITHMS]
                 print(f"{family:12} n={n}", file=sys.stderr, flush=True)
