@@ -1,0 +1,47 @@
+{
+  "started_utc": "2026-11-20T23:22:57+00:00",
+  "wall_seconds": 1008.5,
+  "rows": 210,
+  "commit": "3b5a41f950d53138fc4dc91c1cc344145c512121",
+  "uncommitted_changes": false,
+  "command": "benchmark_ratios.py --no-relabel --families path grid small_world --small-sizes --sizes 1000 --out results/raw/benchmark_ratios_no_relabel.csv",
+  "relabel": false,
+  "families": [
+    "path",
+    "grid",
+    "small_world"
+  ],
+  "small_sizes": [],
+  "sizes": [
+    1000
+  ],
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "repeats": 1,
+  "python": "3.13.9",
+  "libraries": {
+    "networkx": "3.7",
+    "numpy": "2.5.3",
+    "scipy": "1.18.1",
+    "pandas": "3.0.6"
+  },
+  "os": "macOS-15.7.4-arm64-arm-64bit-Mach-O",
+  "cpu": "Apple M4 Max",
+  "cpu_count": 14,
+  "thread_env": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": null,
+    "MKL_NUM_THREADS": null,
+    "VECLIB_MAXIMUM_THREADS": "1"
+  }
+}

@@ -1,7 +1,8 @@
 # Graph Burning: Empirical Comparison of Approximation Algorithms
 
 COMP3821 group project. We compare four polynomial-time algorithms for estimating the burning
-number b(G), measuring accuracy and runtime across simple, adversarial and real-world graphs.
+number b(G), measuring accuracy and runtime across simple and adversarial graph families, plus two random
+network models (small-world and scale-free).
 
 ## Layout
 
@@ -11,11 +12,14 @@ src/burning/
   generators/      one file per graph family (or group of families)
 experiments/
   configs/         experiment configs (graph families, sizes, seeds, algorithms)
+  benchmark_ratios.py  the report's benchmark (ratios, runtimes, structure)
+  plot.py          report figures and tables from the benchmark CSVs
 tests/             unit tests for algorithms and generators
 notebooks/         exploration only
 results/
-  raw/             experiment output CSVs (git-ignored, regenerate from configs)
-  figures/         plots
+  raw/             experiment output CSVs (git-ignored, except the benchmark data)
+  figures/         report figures (PDF)
+  tables/          report tables (CSV and LaTeX)
 ```
 
 ### Code
@@ -43,8 +47,10 @@ the final results moves into `experiments/` so it can be rerun.
 
 - `results/raw/` holds the CSVs produced by experiment runs: one row per algorithm,
 graph and size, with rounds taken and runtime. It is git-ignored because the CSVs can be
-regenerated from the configs.
-- `results/figures/` holds the plots made from those CSVs, used in the report and poster.
+regenerated from the configs. The exception is the benchmark data behind the report
+(`benchmark_ratios*.csv` and their `.meta.json` files), which is committed.
+- `results/figures/` and `results/tables/` hold the figures and tables made from those CSVs,
+used in the report and poster.
 
 ### Pipeline
 
@@ -74,7 +80,7 @@ A config is a YAML file in `experiments/configs/` with these keys:
 | ------------ | -------- | ------------------------------------------------------------------------ |
 | `seeds`      | yes      | List of seeds. The runner builds each graph once per seed.               |
 | `families`   | yes      | Map from a family name to a list of target sizes `n`.                    |
-| `algorithms` | noclea   | List of algorithm names. Leave it out to run every registered algorithm. |
+| `algorithms` | no       | List of algorithm names. Leave it out to run every registered algorithm. |
 
 ```yaml
 seeds: [0, 1, 2]
@@ -103,7 +109,7 @@ seed, so extra seeds only repeat the timing.
 uv run python experiments/run.py experiments/configs/default.yaml
 ```
 
-The default config takes about 30 seconds. The runner builds each graph, times each algorithm
+The runner builds each graph, times each algorithm
 on it, and scores the sequence with `burning_rounds`. It writes `results/raw/<config name>.csv`,
 named after the config file, and overwrites any earlier file with that name. It then prints the
 mean rounds for each family and size, one column per algorithm:
@@ -143,6 +149,45 @@ df = pd.read_csv("results/raw/default.csv")
 df.groupby(["family", "n", "algorithm"])["rounds"].mean()
 ```
 
+## Reproduce the report's results
+
+The report's numbers come from `experiments/benchmark_ratios.py`, not from a config. Each run
+writes a CSV and a `.meta.json` next to it with the commit, machine, library versions and thread
+settings. Pin BLAS to one thread so runtimes are comparable across algorithms:
+
+```bash
+export OMP_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 PYTHONPATH=src
+
+# Main benchmark: every family and algorithm, n = 10-30 (exact b) and 50-1000, 10 relabelled
+# seeds. Writes results/raw/benchmark_ratios.csv. Takes about 2 hours, mostly eigenvector
+# centrality at n = 500 and 1000.
+uv run python experiments/benchmark_ratios.py
+
+# Labelling artefact: generator labels (no relabelling), n = 1000.
+uv run python experiments/benchmark_ratios.py --no-relabel \
+    --families path grid small_world --small-sizes --sizes 1000 \
+    --out results/raw/benchmark_ratios_no_relabel.csv
+
+# Figures F1-F6 (results/figures/*.pdf) and tables (results/tables/).
+uv run python experiments/plot.py
+```
+
+| Output                                | Content                                                       |
+| ------------------------------------- | ------------------------------------------------------------- |
+| `figures/f1_ratio_vs_n.pdf`           | Ratio against n, one panel per family, sd over seeds          |
+| `figures/f2_gap_vs_structure.pdf`     | 3-approx gap to the best algorithm against diam/√n and Δ/d̄   |
+| `figures/f3_runtime.pdf`              | Median runtime against n, log-log, with fitted slopes         |
+| `figures/f4_hybrids.pdf`              | Hybrid scan orders relative to plain 3-approx                 |
+| `figures/f5_spread.pdf`               | sd of rounds over relabellings                                |
+| `figures/f6_labelling.pdf`            | Generator labels against relabelled                           |
+| `tables/t1_small_exact.{csv,tex}`     | Mean rounds / b for n ≤ 30                                    |
+| `tables/summary.csv`                  | Per-algorithm headline numbers                                |
+
+Each benchmark row has `rounds`, `b_exact` (n ≤ 30, or the path and star formulas),
+`lb_best` = L(G), `ratio` (rounds / b, or rounds / L(G), an upper bound on the true ratio),
+`valid` (every source unburned when lit), `runtime_s`, and the structure columns `diam`,
+`max_deg`, `avg_deg`, `diam_over_sqrt_n` and `maxdeg_over_avgdeg`.
+
 ## Algorithms
 
 | Algorithm                         | Owner     |
@@ -156,8 +201,7 @@ df.groupby(["family", "n", "algorithm"])["rounds"].mean()
 The extension variants (`three_approx_degree`, `three_approx_eigen`, `three_approx_farthest` in
 `hybrid_approx.py`) run Burn-Guess in degree, eigenvector-centrality or farthest-first order.
 The 3-approximation proof never depends on the scan order, so each keeps the 3 b(G) guarantee.
-`experiments/benchmark_ratios.py` compares every algorithm's ratio against exact or
-lower-bound values of b(G).
+See "Reproduce the report's results" for the benchmark that compares them.
 
 ## Generators
 

@@ -1,0 +1,8 @@
+,small_mean_ratio,small_max_ratio,small_optimal_share,big_mean_ratio,big_max_ratio,best_or_tied_share,runtime_slope,median_runtime_s_at_max_n,valid_share
+3-approx,1.4566,2.3333,0.0600,1.7683,2.7500,0.0160,1.2069,0.0041,1.0000
+3-approx (degree order),1.3028,2.0000,0.2360,1.6188,2.7500,0.1880,1.2035,0.0042,1.0000
+3-approx (eigen order),1.2621,1.8333,0.2700,1.5531,2.5000,0.2320,1.0963,0.0096,1.0000
+3-approx (farthest order),1.4717,2.3333,0.0520,1.7723,2.7500,0.0140,1.3295,0.0075,1.0000
+Max degree,1.1096,1.5000,0.5960,1.5168,2.6667,0.3520,1.2001,0.0009,1.0000
+Farthest-first,1.2311,1.7500,0.3060,1.5700,2.7500,0.1400,1.3558,0.0054,1.0000
+Eigenvector centrality,1.0406,1.3333,0.8440,1.2778,2.2000,0.9880,2.3785,16.0445,1.0000

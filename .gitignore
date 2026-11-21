@@ -11,4 +11,7 @@ data/snap/*
 !data/snap/.gitkeep
 results/raw/*
 !results/raw/.gitkeep
+# Benchmark data behind the report's tables and figures
+!results/raw/benchmark_ratios*.csv
+!results/raw/benchmark_ratios*.meta.json
 

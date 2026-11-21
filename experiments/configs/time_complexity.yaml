@@ -1,6 +1,6 @@
-# Every registered family at three sizes, three seeds, every registered algorithm.
-# Run: PYTHONPATH=src .venv/bin/python experiments/run.py experiments/configs/default.yaml
-# Writes results/raw/default.csv.
+# Runtime sweep for eigenvector centrality: every family at five sizes, one seed.
+# Run: PYTHONPATH=src .venv/bin/python experiments/run.py experiments/configs/time_complexity.yaml
+# Writes results/raw/time_complexity.csv.
 
 seeds: [0]
 algorithms: [eigen_centrality]   # omit to run every registered algorithm
